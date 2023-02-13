@@ -1,0 +1,14 @@
+{
+	"name": "Wiimote",
+	"version": "0.1",
+	"description": "Wiimote library for the ESP32",
+	"keywords": "wiimote,wii-fit,wii",
+	"repository":
+	{
+		"type": "git",
+		"url": "https://github.com/Acorn221/Wiimote/"
+	},
+	"Licence": "MIT",
+	"frameworks": "*",
+  "platforms": "*"
+}
