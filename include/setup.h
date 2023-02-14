@@ -16,8 +16,8 @@
 #define PSM_HID_Control_11   0x0011
 #define PSM_HID_Interrupt_13 0x0013
 
-#define RX_QUEUE_SIZE 32
-#define TX_QUEUE_SIZE 32
+#define RX_QUEUE_SIZE 64
+#define TX_QUEUE_SIZE 64
 
 #define FORMAT_HEX_MAX_BYTES 30
 
