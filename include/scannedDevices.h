@@ -1,10 +1,4 @@
-#include <esp_bt.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
-#include <esp32-hal-log.h>
-#include <esp32-hal-bt.h>
-
-#include "wiimote_bt.h"
+#include "setup.h"
 
 /**
  * Scanned device list

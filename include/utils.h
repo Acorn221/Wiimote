@@ -1,7 +1,3 @@
-#include <esp_bt.h>
-#include <freertos/queue.h>
-#include <esp32-hal-bt.h>
-
 #include "setup.h"
 
 

@@ -1,4 +1,8 @@
 #include <esp_bt.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <esp32-hal-log.h>
+#include <esp32-hal-bt.h>
 
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -16,3 +20,5 @@
 #define TX_QUEUE_SIZE 32
 
 #define FORMAT_HEX_MAX_BYTES 30
+
+#define L2CAP_CONNECTION_LIST_SIZE 8

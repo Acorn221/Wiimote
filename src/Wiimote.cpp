@@ -9,6 +9,7 @@
 #include "scannedDevices.h"
 #include "setup.h"
 #include "utils.h"
+#include "l2cap.h"
 
 static Wiimote* _singleton = NULL;
 
@@ -22,16 +23,8 @@ static uint16_t balance_calibration[12];
 /**
  * L2CAP Connection
  */
-struct l2cap_connection_t {
-  uint16_t connection_handle;
-  uint16_t psm;
-  uint16_t local_cid;
-  uint16_t remote_cid;
-};
 
 static int l2cap_connection_size = 0;
-
-#define L2CAP_CONNECTION_LIST_SIZE 8
 
 static l2cap_connection_t l2cap_connection_list[L2CAP_CONNECTION_LIST_SIZE];
 
@@ -66,6 +59,7 @@ static int l2cap_connection_add(struct l2cap_connection_t l2cap_connection) {
 static void l2cap_connection_clear(void) {
   l2cap_connection_size = 0;
 }
+
 
 /**
  * callback
