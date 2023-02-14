@@ -4,19 +4,11 @@
 #include <esp32-hal-log.h>
 #include <esp32-hal-bt.h>
 
-#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
-#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
-#endif
-
-#ifndef CONFIG_CLASSIC_BT_ENABLED
-#error Need CLASSIC BT.
-#endif
-
 #include "wiimote_bt.h"
 #include "Wiimote.h"
-
-#define PSM_HID_Control_11   0x0011
-#define PSM_HID_Interrupt_13 0x0013
+#include "scannedDevices.h"
+#include "setup.h"
+#include "utils.h"
 
 static Wiimote* _singleton = NULL;
 
@@ -26,91 +18,6 @@ static uint8_t _g_identifier = 1;
 static uint16_t _g_local_cid = 0x0040;
 
 static uint16_t balance_calibration[12];
-
-/**
- * Queue
- */
-typedef struct {
-  size_t len;
-  uint8_t data[];
-} lendata_t;
-
-#define RX_QUEUE_SIZE 32
-#define TX_QUEUE_SIZE 32
-
-static xQueueHandle _rx_queue = NULL;
-static xQueueHandle _tx_queue = NULL;
-
-static esp_err_t _queue_data(xQueueHandle queue, uint8_t* data, size_t len) {
-  if (!data || !len) {
-    log_w("No data provided");
-    return ESP_OK;
-  }
-  lendata_t* lendata = (lendata_t*)malloc(sizeof(lendata_t) + len);
-  if (!lendata) {
-    log_e("lendata Malloc Failed!");
-    return ESP_FAIL;
-  }
-  lendata->len = len;
-  memcpy(lendata->data, data, len);
-  if (xQueueSend(queue, &lendata, portMAX_DELAY) != pdPASS) {
-    log_e("xQueueSend failed");
-    free(lendata);
-    return ESP_FAIL;
-  }
-  return ESP_OK;
-}
-
-/**
- * Utils
- */
-#define FORMAT_HEX_MAX_BYTES 30
-static char formatHexBuffer[FORMAT_HEX_MAX_BYTES * 3 + 3 + 1];
-
-static char* formatHex(uint8_t* data, uint16_t len) {
-  for (uint16_t i = 0; i < len && i < FORMAT_HEX_MAX_BYTES; i++) {
-    sprintf(formatHexBuffer + 3 * i, "%02X ", data[i]);
-  }
-  if (FORMAT_HEX_MAX_BYTES < len) {
-    sprintf(formatHexBuffer + 3 * FORMAT_HEX_MAX_BYTES, "...");
-  }
-  return formatHexBuffer;
-}
-
-/**
- * Scanned device list
- */
-
-struct scanned_device_t {
-  bd_addr_t bd_addr;
-  uint8_t psrm;
-  uint16_t clkofs;
-};
-
-static int scanned_device_list_size = 0;
-#define SCANNED_DEVICE_LIST_SIZE 16
-static scanned_device_t scanned_device_list[SCANNED_DEVICE_LIST_SIZE];
-static int scanned_device_find(struct bd_addr_t* bd_addr) {
-  for (int i = 0; i < scanned_device_list_size; i++) {
-    scanned_device_t* c = &scanned_device_list[i];
-    if (memcmp(&bd_addr->addr, c->bd_addr.addr, BD_ADDR_LEN) == 0) {
-      return i;
-    }
-  }
-  return -1;
-}
-
-static int scanned_device_add(struct scanned_device_t scanned_device) {
-  if (SCANNED_DEVICE_LIST_SIZE == scanned_device_list_size) {
-    return -1;
-  }
-  scanned_device_list[scanned_device_list_size++] = scanned_device;
-  return scanned_device_list_size;
-}
-
-static void scanned_device_clear(void) {
-  scanned_device_list_size = 0;
-}
 
 /**
  * L2CAP Connection
@@ -155,6 +62,7 @@ static int l2cap_connection_add(struct l2cap_connection_t l2cap_connection) {
   l2cap_connection_list[l2cap_connection_size++] = l2cap_connection;
   return l2cap_connection_size;
 }
+
 static void l2cap_connection_clear(void) {
   l2cap_connection_size = 0;
 }
