@@ -571,6 +571,7 @@ static void process_l2cap_configuration_request(uint16_t connection_handle, uint
     uint16_t data_len = 14;
     uint16_t len = make_acl_l2cap_single_packet(tmp_data, connection_handle, packet_boundary_flag, broadcast_flag, channel_id, data, data_len);
     _queue_data(_tx_queue, tmp_data, len); // TODO: check return
+    // TODO: this is likely the cause of the balance board not always working, this needs to be re-qeued if the board is not responding
     log_d("queued acl_l2cap_single_packet(CONFIGURATION RESPONSE)");
 
     if (l2cap_connection.psm == PSM_HID_Control_11) {
