@@ -1,4 +1,4 @@
-#include "scan.h"
+#include "ScanDevices.h"
 
 // ScanDevices constructor
 ScanDevices::ScanDevices() {
@@ -38,7 +38,9 @@ static int ScanDevices::scanned_device_add(struct scanned_device_t scanned_devic
 
 	} else {
 		bool foundManu = false;
-		manufacturer_t curr = manu;
+		// creating a temp variable to iterate through the linked list
+		manufacturer_t curr = *manu;
+		
 		// Check the manufacturer of the device
 		while(curr.next != NULL) {
 			if(memcmp(&scanned_device.bd_addr.addr, manu.manufacturer, 3) == 0) {
