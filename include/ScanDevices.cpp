@@ -5,6 +5,12 @@ ScanDevices::ScanDevices() {
 	scanned_device_list_size = 0;
 }
 
+/**
+ * @brief Find a device in the scanned device list
+ * 
+ * @param bd_addr 
+ * @return int The index of the device in the scanned device list
+ */
 static int ScanDevices::scanned_device_find(struct bd_addr_t* bd_addr) {
   for (int i = 0; i < scanned_device_list_size; i++) {
     scanned_device_t* c = &scanned_device_list[i];
@@ -15,11 +21,36 @@ static int ScanDevices::scanned_device_find(struct bd_addr_t* bd_addr) {
   return -1;
 }
 
+/**
+ * @brief Add a device to the scanned device list, when it is discovered
+ * 
+ * @param scanned_device 
+ * @return int 
+ */
 static int ScanDevices::scanned_device_add(struct scanned_device_t scanned_device) {
   if (SCANNED_DEVICE_LIST_SIZE == scanned_device_list_size) {
     return -1;
   }
-  scanned_device_list[scanned_device_list_size++] = scanned_device;
+
+	if(manu == NULL) {
+		log_d("No target manufacturer set, adding device to list");
+		scanned_device_list[scanned_device_list_size++] = scanned_device;
+
+	} else {
+		bool foundManu = false;
+		manufacturer_t curr = manu;
+		// Check the manufacturer of the device
+		while(curr.next != NULL) {
+			if(memcmp(&scanned_device.bd_addr.addr, manu.manufacturer, 3) == 0) {
+				log_d("Found device from target manufacturer, adding device to list");
+				scanned_device_list[scanned_device_list_size++] = scanned_device;
+				foundManu = true;
+				break;
+			}
+			curr = *curr.next;
+		}
+		if(!foundManu) log_d("Device not from target manufacturer, not adding to list");
+	}
   return scanned_device_list_size;
 }
 
