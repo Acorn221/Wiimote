@@ -3,6 +3,7 @@
 #include <freertos/queue.h>
 #include <esp32-hal-log.h>
 #include <esp32-hal-bt.h>
+#include "wiimote_bt.h"
 
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)

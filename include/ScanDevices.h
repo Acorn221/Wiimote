@@ -31,11 +31,14 @@ class ScanDevices {
 		int scanned_device_add(struct scanned_device_t scanned_device);
 		void scanned_device_clear(void);
 		void set_target_manufacturer(struct manufacturer_t manu);
+		void clear_target_manufacturer(void);
 		bool scan_for_devices(bool scan);
 	private:
 		int scanned_device_list_size;
 		static const int SCANNED_DEVICE_LIST_SIZE = 16;
 		scanned_device_t scanned_device_list[SCANNED_DEVICE_LIST_SIZE];
-		char tmp_data[256];
-		_tx_queue_t *_tx_queue;
+		uint8_t *tmp_data[256];
+		xQueueHandle *_tx_queue;
+		manufacturer_t target_manufacturers;
+		bool searchForManufacturer;
 };
