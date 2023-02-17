@@ -65,6 +65,8 @@ static void l2cap_connection_clear(void) {
  * callback
  */
 static void _notify_host_send_available(void) {
+  // TODO: is this called, and should we send the tx_queue here?
+  log_d("notify_host_send_available");
 }
 
 static int _notify_host_recv(uint8_t* data, uint16_t len) {
