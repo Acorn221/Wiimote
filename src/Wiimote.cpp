@@ -10,262 +10,141 @@
 #include "setup.h"
 #include "utils.h"
 #include "l2cap.h"
+
 static Wiimote* _singleton = nullptr;
-
 static uint8_t tmp_data[256];
-
 static bool wiimoteConnected = false;
-
 static uint8_t _g_identifier = 1;
-
 static uint16_t _g_local_cid = 0x0040;
-
 static uint16_t balance_calibration[12];
 
-
 // L2CAP Connection
-
 static int l2cap_connection_size = 0;
-
 static l2cap_connection_t l2cap_connection_list[L2CAP_CONNECTION_LIST_SIZE];
 
-
 static int l2cap_connection_find_by_psm(uint16_t connection_handle, uint16_t psm) {
-
   for (int i = 0; i < l2cap_connection_size; i++) {
-
     l2cap_connection_t* c = &l2cap_connection_list[i];
-
     if (connection_handle == c->connection_handle && psm == c->psm) {
-
       return i;
-
     }
-
   }
-
   return -1;
-
 }
-
 
 static int l2cap_connection_find_by_local_cid(uint16_t connection_handle, uint16_t local_cid) {
-
   for (int i = 0; i < l2cap_connection_size; i++) {
-
     l2cap_connection_t* c = &l2cap_connection_list[i];
-
     if (connection_handle == c->connection_handle && local_cid == c->local_cid) {
-
       return i;
-
     }
-
   }
-
   return -1;
-
 }
-
 
 static int l2cap_connection_add(struct l2cap_connection_t l2cap_connection) {
-
   if (L2CAP_CONNECTION_LIST_SIZE == l2cap_connection_size) {
-
     return -1;
-
   }
-
   l2cap_connection_list[l2cap_connection_size++] = l2cap_connection;
-
   return l2cap_connection_size;
-
 }
-
 
 static void l2cap_connection_clear() {
-
   l2cap_connection_size = 0;
-
 }
-
 
 // Callback
-
 static void _notify_host_send_available() {
-
   // TODO: is this called, and should we send the tx_queue here?
-
   log_d("notify_host_send_available");
-
 }
-
 
 static int _notify_host_recv(uint8_t* data, uint16_t len) {
-
   return (ESP_OK == _queue_data(_rx_queue, data, len)) ? ESP_OK : ESP_FAIL;
-
 }
-
 
 static const esp_vhci_host_callback_t callback {
-
   _notify_host_send_available,
-
   _notify_host_recv
-
 };
 
-
 static void _reset() {
-
   uint16_t len = make_cmd_reset(tmp_data);
-
   _queue_data(_tx_queue, tmp_data, len); // TODO: check return
-
   log_d("queued reset.");
-
 }
-
 
 static void _scan_start() {
-
   scanned_device_clear();
-
   uint8_t timeout = 10; //0x30;
-
   uint16_t len = make_cmd_inquiry(tmp_data, 0x9E8B33, timeout, 0x00);
-
   _queue_data(_tx_queue, tmp_data, len); // TODO: check return
-
   log_d("queued inquiry.");
-
 }
-
 
 static void _scan_stop() {
-
   uint16_t len = make_cmd_inquiry_cancel(tmp_data);
-
   _queue_data(_tx_queue, tmp_data, len); // TODO: check return
-
   log_d("queued inquiry_cancel.");
-
 }
 
-
 static void process_command_complete_event(uint8_t len, uint8_t* data) {
-
   if (data[1] == 0x03 && data[2] == 0x0C) { // Reset
-
     if (data[3] == 0x00) { // OK
-
       log_d("reset OK.");
-
       uint16_t len = make_cmd_read_bd_addr(tmp_data);
-
       _queue_data(_tx_queue, tmp_data, len);
-
       log_d("queued read_bd_addr.");
-
     } else {
-
       log_d("reset failed.");
-
     }
-
   } else if (data[1] == 0x09 && data[2] == 0x10) { // read_bd_addr
-
     if (data[3] == 0x00) { // OK
-
       log_d("read_bd_addr OK. BD_ADDR=%s", formatHex(data + 4, 6));
-
       char name[] = "ESP32-BT-L2CAP";
-
       log_d("sizeof(name)=%d", sizeof(name));
-
       uint16_t len = make_cmd_write_local_name(tmp_data, (uint8_t*)name, sizeof(name));
-
       _queue_data(_tx_queue, tmp_data, len);
-
       log_d("queued write_local_name.");
-
     } else {
-
       log_d("read_bd_addr failed.");
-
     }
-
   } else if (data[1] == 0x13 && data[2] == 0x0C) { // write_local_name
-
     if (data[3] == 0x00) { // OK
-
       log_d("write_local_name OK.");
-
       uint8_t cod[3] = { 0x04, 0x05, 0x00 };
-
       uint16_t len = make_cmd_write_class_of_device(tmp_data, cod);
-
       _queue_data(_tx_queue, tmp_data, len);
-
       log_d("queued write_class_of_device.");
-
     } else {
-
       log_d("write_local_name failed.");
-
     }
-
   } else if (data[1] == 0x24 && data[2] == 0x0C) { // write_class_of_device
-
     if (data[3] == 0x00) { // OK
-
       log_d("write_class_of_device OK.");
-
       uint16_t len = make_cmd_write_scan_enable(tmp_data, 3);
-
       _queue_data(_tx_queue, tmp_data, len); // TODO: check return
-
       log_d("queued write_scan_enable.");
-
     } else {
-
       log_d("write_class_of_device failed.");
-
     }
-
   } else if (data[1] == 0x1A && data[2] == 0x0C) { // write_scan_enable
-
     if (data[3] == 0x00) { // OK
-
       log_d("write_scan_enable OK.");
-
       _singleton->_callback(WIIMOTE_EVENT_INITIALIZE, 0, nullptr, 0);
-
     } else {
-
       log_d("write_scan_enable failed.");
-
     }
-
   } else if (data[1] == 0x02 && data[2] == 0x04) { // inquiry_cancel
-
     if (data[3] == 0x00) { // OK
-
       log_d("inquiry_cancel OK.");
-
     } else {
-
       log_d("inquiry_cancel failed.");
-
     }
-
   } else {
-
     log_d("### process_command_complete_event no impl ###");
-
   }
-
 }
 
 static void process_command_status_event(uint8_t len, uint8_t* data) {
